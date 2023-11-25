@@ -1,5 +1,4 @@
 """
-main.py
 This file serves as the driver script to load movies data, build index, and run the search engine.
 """
 
@@ -8,7 +7,12 @@ from src.index import Index
 from src.search import Search
 from src.models.movie import Movie
 from typing import List
+import os
+import certifi
+import nltk
 
+os.environ['SSL_CERT_FILE'] = certifi.where()
+nltk.download('stopwords')
 
 def main():
     """ The main function of the search program. """
