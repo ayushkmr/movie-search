@@ -83,6 +83,7 @@ class Movie:
             self._genres = [Genre(genre) for genre in data.get('genre', []) if genre] or []
             self._keywords = data.get('keywords', '')
             self._rating = Rating(data.get('aggregateRating', {}))
+            self._rating_value = self._rating.to_dict().get('ratingValue')
             self._content_rating = data.get('contentRating', '')
             self._description = data.get('description', '')
             self._duration = data.get('duration', '')
@@ -131,6 +132,11 @@ class Movie:
     def rating(self):
         """ Returns the rating of the movie """
         return self._rating
+    
+    @property
+    def rating_value(self):
+        """ Returns the rating value of the movie """
+        return self._rating_value
 
     @property
     def content_rating(self):

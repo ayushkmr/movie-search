@@ -32,7 +32,7 @@ class Rating:
         """
         self._best_rating = data.get('bestRating')
         self._rating_count = data.get('ratingCount')
-        self._rating_value = data.get('ratingValue')
+        self._rating_value = data.get('ratingValue', 0)
         self._worst_rating = data.get('worstRating')
 
     @property

@@ -3,13 +3,14 @@ This module is responsible for searching through indexed movie data.
 """
 
 from collections import defaultdict
+from operator import attrgetter
 from typing import Dict, List
 from src.index import Index
-
+from src.models.movie import Movie
 
 class Search:
     """
-    A class used to represent a search engine that uses the index to perform searches. 
+    A class used to represent a search engine that uses the index to perform searches.
 
     Attributes
     ----------
@@ -17,29 +18,46 @@ class Search:
         An index containing words mapped to movie names where it appears.
     num_results : int
         The number of search results to display.
+    no_result_message : str
+        The message to display when no results are found.
+    top_rated_movies : List[str]
+        A list of movie names of top-rated movies.
 
     Methods
     -------
     perform_search(query: str)
-        Performs a search using the query, and prints out the search results.
+        Performs a search using the query, and prints out the top matching movies.
     """
-    def __init__(self, index: Index, num_results: int = 3):
+
+    def __init__(self, index: Index, num_results: int = 3, no_result_message: str = 'No results found'):
         """
         Constructs all the necessary attributes for the Search object.
-
+        
         Parameters
         ----------
-            index : Index
-                An index object that the Search object will use to perform searches.
-            num_results : int
-                The number of search results to display (default is 3).
+        index : Index
+            An index object that the Search object will use to perform searches.
+        num_results : int
+            The number of search results to display (default is 3).
+        no_result_message : str
+            The message to display when no results are found (default is 'No results found').
         """
         self.index = index.index
         self.num_results = num_results
+        self.no_result_message = no_result_message
+
+        # Only consider movies that have a ratingValue
+        rated_movies = [movie for movie in index.movies if movie.rating_value is not None]
+
+        # Sort movies by ratingValue
+        rated_movies.sort(key=attrgetter('rating_value'), reverse=True)
+
+        # Keep top num_results movies
+        self.top_rated_movies = rated_movies[:num_results]
 
     def perform_search(self, query: str):
         """
-        Performs a search using the query, and prints out the search results.
+        Performs a search using the query, and prints out the top matching movies.
 
         Parameters
         ----------
@@ -51,5 +69,13 @@ class Search:
             for movie_name in self.index[word]:
                 results[movie_name] += 1
         results = sorted(results.items(), key=lambda x: x[1], reverse=True)[:self.num_results]
-        for movie_name, _ in results:
-            print(movie_name)
+
+        if not results:
+            print(self.no_result_message)
+            print('Showing top-rated movies instead:')
+            for movie in self.top_rated_movies:
+                print(movie.name)
+        else:
+            print(f'Top {self.num_results} movies for your query:')
+            for movie_name, _ in results:
+                print(movie_name)

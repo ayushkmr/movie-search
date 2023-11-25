@@ -19,29 +19,48 @@ def main():
     
     # Load movies from JSON file
     movies: List[Movie] = load_movies_from_json_file("movies.json")
-    
-    # Ask user for number of results to display
-    num_results: str = input("Enter the number of top relevant movie names to display (default is 3): ")
-    num_results: int = int(num_results) if num_results.isdigit() else 3
+
+    # Default configuration
+    num_results: int = 3
+    no_result_message = 'No results found'
 
     # Create index
     index: Index = Index(movies)
-    
+
     # Create search engine using the index
-    search: Search = Search(index, num_results)
+    search = Search(index, num_results)
     
+    print("\n[INFO] Type 'exit' to quit the program.")
+    print("[INFO] Type '--configure' to open the configuration menu.")
+
     # Keep the search running until the user wants to exit
     while True:
-        print("\n[INFO] Type 'exit' to quit the program.")
         query: str = input("\nEnter your search query: ")
         
         # If the query is 'exit', break the loop
         if query.lower() == "exit":
-            print("[INFO] Exiting the program.")
+            print("\n[INFO] Exiting the program.")
             break
+
+        # If the query is '--configure', open the configuration menu
+        elif query.lower() == '--configure':
+            print("\n***Configuration Menu***")
+            num_results_input = input("\nEnter the number of top relevant movie names to display (default is 3): ")
+            num_results = int(num_results_input) if num_results_input.isdigit() else num_results
+            
+            no_result_message_input = input("\nEnter the message to display when no results are found (default is 'No results found'): ")
+            no_result_message = no_result_message_input if no_result_message_input != '' else no_result_message
+
+            # Update search with the new configuration
+            search = Search(index, num_results, no_result_message)
+            print("\nConfiguration updated!")
         
         # Perform search
-        search.perform_search(query)
+        else:
+            search.perform_search(query)
+        
+        print("________________________________________________________________")
+        
 
 
 if __name__ == "__main__":
