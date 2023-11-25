@@ -1,0 +1,18 @@
+# .gitignore
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# If using Jupyter notebooks
+.ipynb_checkpoints
+
+# Other common directories and files to ignore
+.DS_Store    # If working on MacOS
+.vscode/     # If using Visual Studio Code
+.idea/       # If using PyCharm
+*.log
+
+# add others as per your project needs
