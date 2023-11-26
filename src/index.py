@@ -4,6 +4,7 @@ This module is responsible for building an index from movie data.
 
 from collections import defaultdict
 from src.models.movie import Movie
+import string
 from typing import List, Dict
 from nltk.corpus import stopwords
 
@@ -53,6 +54,9 @@ class Index:
         movie : Movie
             movie associated with the field
         """
+        # Remove punctuation at the end of words
+        field = " ".join(word.rstrip(string.punctuation) for word in field.split())
+
         for word in field.lower().split():
             if word not in self.stop_words and movie not in self.index[word]:
                 self.index[word].append(movie)
