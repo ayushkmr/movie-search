@@ -35,20 +35,24 @@ To run the search engine, simply execute the `main.py` script:
 python main.py
 ```
 
-You will be prompted to enter a search query. You can enter a single keyword or multiple keywords to search for movies. 
-
-If you want to enter configuration mode, enter `--configure`.
-
-In configuration mode, you will be able to:
-
-- Set the number of movies to display when a search query has been input.
-- Set a custom message to display when no search results are found.
+You will be prompted to enter a search query. You can enter a single keyword, multiple keywords to search for movies, or a year to get top-rated movies from that year.
 
 ## Features
 
-- Search movie names based on user queries.
-- Allows configuration for the number of search results and the message to display when no results are found.
-- Provides top-rated movies when no search results are found.
+- Search movie titles based on user queries.
+- When no search results are found, the search engine attempts a fuzzy search.
+- If fuzzy search also yields no results, it provides a list of top-rated movies.
+- Year-based search for top-rated movies from a specific year.
+
+## Configuration
+
+The search engine provides configuration mode where you will be able to:
+
+- Set the number of movies to display when a search query has been input.
+- Set a custom message to display when no search results are found.
+- Set the fuzz ratio to specify the similarity percentage for the fuzzy search.
+
+To enter this mode type `--configure` at the search prompt.
 
 ## Contribute
 
