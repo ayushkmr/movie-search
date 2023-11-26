@@ -1,12 +1,21 @@
 """
 This module is responsible for searching through indexed movie data.
+
+The Search class encapsulates the logic for performing searches
+by using the pre-built index. It also makes use of the helper functions
+in the search_utils.py module.
 """
 
-from collections import defaultdict
-from operator import attrgetter
-from typing import Dict, List
-from src.index import Index
+from src.utils.search_utils import (
+    print_results,
+    print_no_result_message,
+    get_movies_by_year,
+    sort_by_rating,
+    try_parse_date
+)
 from src.models.movie import Movie
+from src.index import Index
+from typing import Dict, List
 
 class Search:
     """
@@ -24,75 +33,67 @@ class Search:
         The message to display when no results are found.
     top_rated_movies : List[Movie]
         A list of top-rated movies.
-
-    Methods
-    -------
-    perform_search(query: str)
-        Performs a search using the query, and prints out the top matching movies.
-    get_movies_by_year(year: int):
-        Prints the names of top rated movies released in a particular year.
     """
 
     def __init__(self, index: Index, num_results: int = 3, no_result_message: str = 'No results found'):
         """
         Constructs all the necessary attributes for the Search object.
-        
+
         Parameters
         ----------
         index : Index
             An index object that the Search object will use to perform searches.
         num_results : int
-            The number of search results to display (default is 3).
+            The number of search results to display (by default is 3).
         no_result_message : str
-            The message to display when no results are found (default is 'No results found').
+            A message to display when no results are found (by default is 'No results found').
         """
         self.index = index.index
         self.year_index = index.year_index
         self.num_results = num_results
         self.no_result_message = no_result_message
-
-        # Only consider movies that have a rating_value
         rated_movies = [movie for movie in index.movies if movie.rating_value is not None]
-
-        # Sort movies by ratingValue
-        rated_movies.sort(key=attrgetter('rating_value'), reverse=True)
-
-        # Keep top num_results movies
-        self.top_rated_movies = rated_movies[:num_results]
-
-    def get_movies_by_year(self, year: int): 
-        """ Prints the names of top-rated movies released in a particular year. """
-        movies = self.year_index[year]
-        num_results_to_show = min(len(movies), self.num_results)
-        if movies:
-            print(f"\nTop {num_results_to_show} movies from {year}:")
-            for movie in sorted(movies, key=attrgetter('rating_value'), reverse=True)[:num_results_to_show]:
-                print(f'\t{movie.name}')
-        else:
-            print(f"No movies found from {year}.")
+        self.top_rated_movies = sort_by_rating(rated_movies, num_results)
 
     def perform_search(self, query: str):
         """
-        Perform search for the query
+        Performs a search using the query, and prints out the top matching movies
+        or movies published on a specific date or year if the query is a date.
+
+        Parameters
+        ----------
+        query: str
+            The search query or date.
         """
-        query_words = query.lower().split()
-        result_set = []
+        # First, check if the query matches the name of a movie exactly
+        movies = [movie for movie_list in self.index.values() for movie in movie_list
+                  if movie.name.lower() == query.lower()]
 
-        for word in query_words:
-            if word in self.index:
-                result_set.extend(self.index[word])
+        if movies:  # If there are matches, print them
+            print_results(sort_by_rating(movies, self.num_results), self.num_results)
+            return
 
-        # If we found some results, sort them by rating_value and display top results
-        if result_set:
-            result_set.sort(key=attrgetter('rating_value'), reverse=True)
-            num_results_to_show = min(len(result_set), self.num_results)
-            print(f"\nTop {num_results_to_show} results:")
-            for movie in result_set[:num_results_to_show]:
-                print(f'\t{movie.name}')
+        # If no exact name match found, then try to parse the query as a date
+        date = try_parse_date(query)
+        if date:  # If query is a date
+            # No need to check for movies matching this date
+            # Just get movies by the year of the query date
+            self.get_movies_by_year(date.year)
 
-        # If no result was found, print top-rated movies.
-        else:
-            print(self.no_result_message)
-            print('Showing top-rated movies instead:')
-            for movie in self.top_rated_movies:
-                print(f'\t{movie.name}')
+        else:  # If the query is not a valid date, treat it as a string
+            result_set = {movie for word in query.lower().split() if word in self.index for movie in self.index[word]}
+            if result_set:
+                print_results(sort_by_rating(list(result_set), self.num_results), self.num_results)
+            else:
+                print_no_result_message(self.no_result_message, self.top_rated_movies)
+
+    def get_movies_by_year(self, year: int):
+        """
+        Wrapper function for the get_movies_by_year in search_utils.
+
+        Parameters
+        ----------
+        year : int
+            The year to find movies from.
+        """
+        get_movies_by_year(self.year_index, year, self.num_results)

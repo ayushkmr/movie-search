@@ -11,7 +11,7 @@ class DatePublished:
 
     Attributes
     ----------
-    _date : datetime
+    _date : datetime.date
         a private attribute to hold the date published
     _year : int
         a private attribute to hold the year of date published
@@ -22,6 +22,10 @@ class DatePublished:
         allows us to get and set the value of _date
     year : property
         allows us to get and set the value of _year
+    parse_date(date_str: str): datetime.date
+        parses the date string into a datetime.date object
+    to_dict() : str
+        serializes the date object to an ISO 8601 string representation
     """
 
     def __init__(self, date_string: str):
@@ -34,7 +38,7 @@ class DatePublished:
                 the date published in 'YYYY-MM-DD' or 'YYYY' format
         """
         if date_string:
-            self._date = self.parse_date(date_string)
+            self._date = self.parse_date(date_string).date()  # convert datetime to date
             self._year = self._date.year
         else:
             self._date = None
@@ -42,7 +46,7 @@ class DatePublished:
 
     @property
     def date(self):
-        """ Returns the date published """
+        """ Returns the date published as a date object """
         return self._date
 
     @property
@@ -62,4 +66,4 @@ class DatePublished:
         raise ValueError(f"No known format found for date: {date_str}")
 
     def to_dict(self):
-        return self._date.isoformat()  # convert datetime object to ISO 8601 string representation
+        return self._date.isoformat() if self._date else None  # convert datetime.date object to ISO 8601 string representation

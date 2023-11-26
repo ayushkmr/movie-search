@@ -89,8 +89,9 @@ class Movie:
             self._duration = data.get('duration', '')
             self._image = data.get('image', '')
             self._url = data.get('url', '')
-            self._date_published = DatePublished(data.get('datePublished', {}))
-            self._year = self._date_published.year
+            date_published_data = data.get('datePublished')
+            self._date_published = DatePublished(date_published_data) if date_published_data else None
+            self._year = self._date_published.year if self._date_published else None
             self._trailer = Trailer(data.get('trailer', {}))
             self._type = data.get('@type', '')
             print(f"Movie object initialized. Name: {self._name}")
@@ -167,7 +168,8 @@ class Movie:
     @property
     def date_published(self):
         """ Returns the date published of the movie """
-        return self._date_published
+        return self._date_published.date if self._date_published else None
+
 
     @property
     def year(self):
