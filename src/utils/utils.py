@@ -75,4 +75,3 @@ def load_movies_from_json_file(filepath):
             print(f"Unable to load movie. Error: {e}")
 
     return movie_objects
-

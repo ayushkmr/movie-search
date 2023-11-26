@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 # Now you can import your custom modules
 from src.models.movie import Movie
-from src.utils.utils import movie_to_json, json_to_movie
+from src.utils.utils import movie_to_json, json_to_movie, load_movies_from_json_file
 
 
 class TestUtils(unittest.TestCase):
@@ -96,6 +96,21 @@ class TestUtils(unittest.TestCase):
             "url": "/title/tt0052357/"
         }
         """
+            # Create temp json file
+        self.path_to_file = "temp.json"
+        with open(self.path_to_file, 'w') as temp_file:
+            temp_file.write('[{}]'.format(self.sample_json.strip()))  # making it a list of movies
+
+    def tearDown(self):
+        os.remove(self.path_to_file)  # Cleanup after test
+
+    def test_load_movies_from_json_file(self):
+        movies = load_movies_from_json_file(self.path_to_file)
+        self.assertEqual(len(movies), 1)  # Expecting a single movie
+
+        movie = movies[0]
+        self.assertIsInstance(movie, Movie)
+        self.assertEqual(movie.name, "Vertigo")
 
     def test_movie_to_json(self):
         movie = json_to_movie(self.sample_json)
