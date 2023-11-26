@@ -6,13 +6,7 @@ by using the pre-built index. It also makes use of the helper functions
 in the search_utils.py module.
 """
 
-from src.utils.search_utils import (
-    print_results,
-    print_no_result_message,
-    get_movies_by_year,
-    sort_by_rating,
-    try_parse_date
-)
+from src.utils.search_utils import *
 from src.models.movie import Movie
 from src.index import Index
 from typing import Dict, List
@@ -55,37 +49,48 @@ class Search:
         rated_movies = [movie for movie in index.movies if movie.rating_value is not None]
         self.top_rated_movies = sort_by_rating(rated_movies, num_results)
 
+
     def perform_search(self, query: str):
         """
-        Performs a search using the query, and prints out the top matching movies
-        or movies published on a specific date or year if the query is a date.
+        Performs a full match, chunked match, or a keyword-based search using the query, 
+        also searches for top-rated movies published in a specific year if the query is a date.
+        
+        The function first attempts a full match search, if no results then a chunked match search,
+        if still no results are found it falls back to a keyword-based search.
+        
+        If the query can be parsed into a date, the function gets movies by that year instead.
+        
+        Results are always unique movies.
 
         Parameters
         ----------
         query: str
             The search query or date.
         """
-        # First, check if the query matches the name of a movie exactly
-        movies = [movie for movie_list in self.index.values() for movie in movie_list
-                  if movie.name.lower() == query.lower()]
-
-        if movies:  # If there are matches, print them
+        # Try to perform a full query match and print the results
+        movies = perform_full_query_search(self.index, query)
+        if movies:
             print_results(sort_by_rating(movies, self.num_results), self.num_results)
             return
 
-        # If no exact name match found, then try to parse the query as a date
+        # If no exact name match found, try to parse the query as a date and get movies by year
         date = try_parse_date(query)
         if date:  # If query is a date
-            # No need to check for movies matching this date
-            # Just get movies by the year of the query date
             self.get_movies_by_year(date.year)
-
-        else:  # If the query is not a valid date, treat it as a string
-            result_set = {movie for word in query.lower().split() if word in self.index for movie in self.index[word]}
-            if result_set:
-                print_results(sort_by_rating(list(result_set), self.num_results), self.num_results)
+        else:  
+            # If the query is not a date, try to perform chunked query search
+            movies = perform_chunked_query_search(self.index, query)
+            
+            # If movies found for chunked query search, print them
+            if movies:
+                print_results(sort_by_rating(movies, self.num_results), self.num_results)
+            # Otherwise, perform a keyword-based search
             else:
-                print_no_result_message(self.no_result_message, self.top_rated_movies)
+                result_set = {movie for word in query.lower().split() if word in self.index for movie in self.index[word]}
+                if result_set:
+                    print_results(sort_by_rating(list(result_set), self.num_results), self.num_results)
+                else:
+                    print_no_result_message(self.no_result_message, self.top_rated_movies)
 
     def get_movies_by_year(self, year: int):
         """

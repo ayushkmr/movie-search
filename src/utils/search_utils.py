@@ -120,3 +120,52 @@ def try_parse_date(text: str) -> Union[datetime, None]:
         return datetime.strptime(text, '%Y-%m-%d')
     except ValueError:
         return None
+
+def perform_full_query_search(index: Dict[str, List[Movie]], query: str) -> List[Movie]:
+    """
+    Attempts to find full query match in the movie names, ensuring uniqueness.
+
+    Parameters
+    ----------
+    index : Dict[str, List[Movie]]
+        An index containing words mapped to movies where it appears.
+    query : str
+        The search query.
+
+    Returns
+    -------
+    list[Movie]
+        List of unique movies that match the query.
+    """
+    # Fetch all matching movies
+    movies = [movie for movie_list in index.values() for movie in movie_list
+                if movie.name.lower() == query.lower()]
+    
+    # Enforce uniqueness with a dict
+    unique_movies = {movie.name: movie for movie in movies}
+    return list(unique_movies.values())
+
+
+def perform_chunked_query_search(index: Dict[str, List[Movie]], query: str) -> List[Movie]:
+    """
+    Attempts to find a match of any word in query within movie names, ensuring uniqueness.
+
+    Parameters
+    ----------
+    index : Dict[str, List[Movie]]
+        An index containing words mapped to movies where it appears.
+    query : str
+        The search query.
+
+    Returns
+    -------
+    list[Movie]
+        List of unique movies that match the query.
+    """
+    # Fetch all matching movies
+    movies = [movie for movie_list in index.values() for movie in movie_list
+                if query.lower() in movie.name.lower()]
+    
+    # Enforce uniqueness with a dict
+    unique_movies = {movie.name: movie for movie in movies}
+    return list(unique_movies.values())
