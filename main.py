@@ -21,14 +21,15 @@ def main():
     movies: List[Movie] = load_movies_from_json_file("movies.json")
 
     # Default configuration
-    num_results: int = 3
+    num_results: int = 10
     no_result_message = 'No results found'
+    fuzz_ratio = 70
 
     # Create index
     index: Index = Index(movies)
 
     # Create search engine using the index
-    search = Search(index, num_results, no_result_message)
+    search = Search(index, num_results, no_result_message, fuzz_ratio)
 
     print("\n[INFO] Type 'exit' to quit the program.")
     print("[INFO] Type '--configure' to open the configuration menu.")
@@ -53,8 +54,12 @@ def main():
             no_result_message = no_result_message_input if no_result_message_input != '' else no_result_message
             print(f"\nMessage when no results found set to '{no_result_message}'")
 
+            fuzz_ratio_input = input("\nEnter the fuzz ratio for fuzzy search (default is 60): ")
+            fuzz_ratio = int(fuzz_ratio_input) if fuzz_ratio_input.isdigit() else fuzz_ratio
+            print(f"\nFuzz ratio set to {fuzz_ratio}")
+
             # Update search with the new configuration
-            search = Search(index, num_results, no_result_message)
+            search = Search(index, num_results, no_result_message, fuzz_ratio)
             print("\nConfiguration updated!")
 
         # If the input is a year (only contains digits) and the year exists in the year index

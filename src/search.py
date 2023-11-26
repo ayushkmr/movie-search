@@ -27,9 +27,11 @@ class Search:
         The message to display when no results are found.
     top_rated_movies : List[Movie]
         A list of top-rated movies.
+    fuzz_ratio : int
+        The ratio for fuzzy search.
     """
 
-    def __init__(self, index: Index, num_results: int = 3, no_result_message: str = 'No results found'):
+    def __init__(self, index: Index, num_results: int = 3, no_result_message: str = 'No results found', fuzz_ratio: int = 60):
         """
         Constructs all the necessary attributes for the Search object.
 
@@ -41,11 +43,14 @@ class Search:
             The number of search results to display (by default is 3).
         no_result_message : str
             A message to display when no results are found (by default is 'No results found').
+        fuzz_ratio : int
+            The ratio for fuzzy search (by default is 60).
         """
         self.index = index.index
         self.year_index = index.year_index
         self.num_results = num_results
         self.no_result_message = no_result_message
+        self.fuzz_ratio = fuzz_ratio
         rated_movies = [movie for movie in index.movies if movie.rating_value is not None]
         self.top_rated_movies = sort_by_rating(rated_movies, num_results)
 
@@ -54,12 +59,14 @@ class Search:
         """
         Performs a full match, chunked match, or a keyword-based search using the query, 
         also searches for top-rated movies published in a specific year if the query is a date.
-        
+
         The function first attempts a full match search, if no results then a chunked match search,
         if still no results are found it falls back to a keyword-based search.
-        
+
         If the query can be parsed into a date, the function gets movies by that year instead.
-        
+
+        If there are still no results found, falls back to a fuzzy search.
+
         Results are always unique movies.
 
         Parameters
@@ -84,13 +91,20 @@ class Search:
             # If movies found for chunked query search, print them
             if movies:
                 print_results(sort_by_rating(movies, self.num_results), self.num_results)
-            # Otherwise, perform a keyword-based search
+            #Otherwise, perform a keyword-based search
             else:
                 result_set = {movie for word in query.lower().split() if word in self.index for movie in self.index[word]}
                 if result_set:
                     print_results(sort_by_rating(list(result_set), self.num_results), self.num_results)
-                else:
-                    print_no_result_message(self.no_result_message, self.top_rated_movies)
+                # If no keywords were found then perform a fuzzy search
+                else:  
+                    fuzzy_search_movies = perform_fuzzy_search(self.index, query, self.fuzz_ratio)
+                    # If movies were found by fuzzy search, print them
+                    if fuzzy_search_movies:
+                        print_results(sort_by_rating(fuzzy_search_movies, self.num_results), self.num_results)
+                    # If not, print the top rated movies
+                    else:  
+                        print_no_result_message(self.no_result_message, self.top_rated_movies)
 
     def get_movies_by_year(self, year: int):
         """

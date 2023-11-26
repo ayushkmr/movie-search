@@ -9,6 +9,30 @@ from typing import Dict, List, Union
 from datetime import datetime
 from operator import attrgetter
 from src.models.movie import Movie
+from fuzzywuzzy import process
+
+def perform_fuzzy_search(index: Dict[str, List[Movie]], query: str, fuzz_ratio: int) -> List[Movie]:
+    """
+    Performs a fuzzy search on the index using the provided query and fuzz ratio.
+
+    Parameters
+    ----------
+    index : Dict[str, List[Movie]]
+        An index containing words mapped to movies where they appear.
+    query: str
+        The search query.
+    fuzz_ratio: int
+        The minimum similarity ratio to consider a match.
+
+    Returns
+    -------
+    List[Movie]
+        A list of unique Movie objects that contain the query string in the movie title.
+    """
+    unique_movies = {movie for movies in index.values() for movie in movies}
+    movie_names = {movie.name: movie for movie in unique_movies}
+    matches = process.extractBests(query, movie_names.keys(), score_cutoff=fuzz_ratio)
+    return [movie_names[name] for name, _ in matches]
 
 def print_results(movies: List[Movie], num_results: int, prefix: str = "\nTop"):
     """
