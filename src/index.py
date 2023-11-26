@@ -3,7 +3,6 @@ This module is responsible for building an index from movie data.
 """
 
 from collections import defaultdict
-from operator import attrgetter
 from src.models.movie import Movie
 from typing import List, Dict
 from nltk.corpus import stopwords
@@ -16,8 +15,8 @@ class Index:
     ----------
     movies : List[Movie]
         a list of Movie objects to be indexed
-    index : Dict[str, List[str]]
-        a dictionary containing words mapped to movie names where they appear
+    index : Dict[str, List[Movie]]
+        a dictionary containing words mapped to movies where they appear
     year_index : Dict[int, List[Movie]]
         a dictionary containing years mapped to movie names from that year
     stop_words : set
@@ -43,7 +42,7 @@ class Index:
         self.stop_words = set(stopwords.words('english')) # set of nltk stop words
         self.build_index()
 
-    def index_field(self, field, movie_name):
+    def index_field(self, field, movie: Movie):
         """
         Index a field for a specific movie.
 
@@ -51,37 +50,36 @@ class Index:
         ----------
         field : str
             space-separated words representation of a field
-        movie_name : str
-            name of the movie associated with the field
+        movie : Movie
+            movie associated with the field
         """
         for word in field.lower().split():
-            if word not in self.stop_words and movie_name not in self.index[word]:
-                self.index[word].append(movie_name)
-
+            if word not in self.stop_words and movie not in self.index[word]:
+                self.index[word].append(movie)
 
     # Indexing logic for the movie name
     def index_movie_name(self, movie):
-        self.index_field(movie.name, movie.name)
+        self.index_field(movie.name, movie)
 
     # Indexing logic for the movie description
     def index_movie_description(self, movie):
-        self.index_field(movie.description, movie.name)
+        self.index_field(movie.description, movie)
 
     # Indexing logic for the movie actors
     def index_movie_actors(self, movie):
-        self.index_field(' '.join([actor.name for actor in movie.actors]), movie.name)
+        self.index_field(' '.join([actor.name for actor in movie.actors]), movie)
 
     # Indexing logic for movie directors
     def index_movie_directors(self, movie):
-        self.index_field(' '.join([director.name for director in movie.directors]), movie.name)
+        self.index_field(' '.join([director.name for director in movie.directors]), movie)
     
     # Indexing logic for movie creators
     def index_movie_creators(self, movie):
-        self.index_field(' '.join([creator.name for creator in movie.creators]), movie.name)
+        self.index_field(' '.join([creator.name for creator in movie.creators]), movie)
 
     # Indexing logic for movie genres
     def index_movie_genres(self, movie):
-        self.index_field(' '.join([genre.name for genre in movie.genres]), movie.name)
+        self.index_field(' '.join([genre.name for genre in movie.genres]), movie)
 
     # Indexing logic for movie rating
     # def index_movie_rating(self, movie):
@@ -93,39 +91,35 @@ class Index:
 
     # Indexing logic for movie duration
     def index_movie_duration(self, movie):
-        self.index_field(movie.duration, movie.name)
+        self.index_field(movie.duration, movie)
 
     # Indexing logic for movie image
     def index_movie_image(self, movie):
-        self.index_field(movie.image, movie.name)
+        self.index_field(movie.image, movie)
 
     # Indexing logic for movie url
     def index_movie_url(self, movie):
-        self.index_field(movie.url, movie.name)
+        self.index_field(movie.url, movie)
 
     # Indexing logic for movie date_published
     def index_movie_date_published(self, movie):
-        self.index_field(str(movie.date_published), movie.name)
+        self.index_field(str(movie.date_published), movie)
+
 
     # Indexing logic for movie trailer
     # def index_movie_trailer(self, movie):
     #     self.index_field(movie.trailer, movie.name)
 
-    def index_movie_by_year(self, movie: Movie, top_n=3):
+    def index_movie_by_year(self, movie: Movie):
         """
         Adds a movie to the year index based on its published year.
-        Keeps only top N movies per year based on rating.
         """
         if movie.year:
             self.year_index[movie.year].append(movie)
-            # Sort movies by rating and keep only the top N
-            self.year_index[movie.year] = sorted(
-                self.year_index[movie.year], key=attrgetter('rating_value'), reverse=True
-            )[:top_n]
 
     # Indexing logic for movie type
     def index_movie_type(self, movie):
-        self.index_field(movie.type, movie.name)
+        self.index_field(movie.type, movie)
 
     def build_index(self):
         """

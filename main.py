@@ -16,8 +16,8 @@ nltk.download('stopwords')
 
 def main():
     """ The main function of the search program. """
-    
-    # Load movies from JSON file
+
+    # Load movies from the JSON file
     movies: List[Movie] = load_movies_from_json_file("movies.json")
 
     # Default configuration
@@ -28,15 +28,15 @@ def main():
     index: Index = Index(movies)
 
     # Create search engine using the index
-    search = Search(index, num_results)
-    
+    search = Search(index, num_results, no_result_message)
+
     print("\n[INFO] Type 'exit' to quit the program.")
     print("[INFO] Type '--configure' to open the configuration menu.")
 
     # Keep the search running until the user wants to exit
     while True:
         query: str = input("\nEnter your search query or year: ")
-        
+
         # If the query is 'exit', break the loop
         if query.lower() == "exit":
             print("\n[INFO] Exiting the program.")
@@ -47,14 +47,16 @@ def main():
             print("\n***Configuration Menu***")
             num_results_input = input("\nEnter the number of top relevant movie names to display (default is 3): ")
             num_results = int(num_results_input) if num_results_input.isdigit() else num_results
-            
+            print(f"\nTop number of results to display set to {num_results}")
+
             no_result_message_input = input("\nEnter the message to display when no results are found (default is 'No results found'): ")
             no_result_message = no_result_message_input if no_result_message_input != '' else no_result_message
+            print(f"\nMessage when no results found set to '{no_result_message}'")
 
             # Update search with the new configuration
             search = Search(index, num_results, no_result_message)
             print("\nConfiguration updated!")
-            
+
         # If the input is a year (only contains digits) and the year exists in the year index
         elif query.isdigit() and int(query) in index.year_index.keys():
             year = int(query)
@@ -63,9 +65,8 @@ def main():
         # Perform search on general query
         else:
             search.perform_search(query)
-        
+
         print("________________________________________________________________")
-        
 
 
 if __name__ == "__main__":
