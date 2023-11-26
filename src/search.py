@@ -43,6 +43,7 @@ class Search:
             The message to display when no results are found (default is 'No results found').
         """
         self.index = index.index
+        self.year_index = index.year_index
         self.num_results = num_results
         self.no_result_message = no_result_message
 
@@ -54,6 +55,16 @@ class Search:
 
         # Keep top num_results movies
         self.top_rated_movies = rated_movies[:num_results]
+        
+    def get_movies_by_year(self, year: int): 
+        """ Prints the names of top rated movies released in a particular year. """
+        movies = self.year_index[year]
+        if movies:
+            print(f"Top rated movies from {year}:")
+            for movie in movies:
+                print(f'\t{movie.name}')
+        else:
+            print(f"No movies found from {year}.")
 
     def perform_search(self, query: str):
         """
@@ -76,6 +87,6 @@ class Search:
             for movie in self.top_rated_movies:
                 print(movie.name)
         else:
-            print(f'Top {self.num_results} movies for your query:')
+            print(f'Top {min(self.num_results,len(results))} movies for your query:')
             for movie_name, _ in results:
                 print(movie_name)

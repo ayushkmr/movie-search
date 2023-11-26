@@ -3,6 +3,7 @@ This module is responsible for building an index from movie data.
 """
 
 from collections import defaultdict
+from operator import attrgetter
 from src.models.movie import Movie
 from typing import List, Dict
 from nltk.corpus import stopwords
@@ -17,6 +18,8 @@ class Index:
         a list of Movie objects to be indexed
     index : Dict[str, List[str]]
         a dictionary containing words mapped to movie names where they appear
+    year_index : Dict[int, List[Movie]]
+        a dictionary containing years mapped to movie names from that year
     stop_words : set
         a set of commonly used words in English to be filtered out
 
@@ -36,6 +39,7 @@ class Index:
         """
         self.movies = movies
         self.index = defaultdict(list)
+        self.year_index = defaultdict(list)
         self.stop_words = set(stopwords.words('english')) # set of nltk stop words
         self.build_index()
 
@@ -107,6 +111,18 @@ class Index:
     # def index_movie_trailer(self, movie):
     #     self.index_field(movie.trailer, movie.name)
 
+    def index_movie_by_year(self, movie: Movie, top_n=3):
+        """
+        Adds a movie to the year index based on its published year.
+        Keeps only top N movies per year based on rating.
+        """
+        if movie.year:
+            self.year_index[movie.year].append(movie)
+            # Sort movies by rating and keep only the top N
+            self.year_index[movie.year] = sorted(
+                self.year_index[movie.year], key=attrgetter('rating_value'), reverse=True
+            )[:top_n]
+
     # Indexing logic for movie type
     def index_movie_type(self, movie):
         self.index_field(movie.type, movie.name)
@@ -129,4 +145,5 @@ class Index:
             self.index_movie_url(movie)
             self.index_movie_date_published(movie)
             # self.index_movie_trailer(movie)
+            self.index_movie_by_year(movie)
             self.index_movie_type(movie)

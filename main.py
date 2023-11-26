@@ -35,7 +35,7 @@ def main():
 
     # Keep the search running until the user wants to exit
     while True:
-        query: str = input("\nEnter your search query: ")
+        query: str = input("\nEnter your search query or year: ")
         
         # If the query is 'exit', break the loop
         if query.lower() == "exit":
@@ -54,8 +54,13 @@ def main():
             # Update search with the new configuration
             search = Search(index, num_results, no_result_message)
             print("\nConfiguration updated!")
-        
-        # Perform search
+            
+        # If the input is a year (only contains digits) and the year exists in the year index
+        elif query.isdigit() and int(query) in index.year_index.keys():
+            year = int(query)
+            search.get_movies_by_year(year)
+
+        # Perform search on general query
         else:
             search.perform_search(query)
         
