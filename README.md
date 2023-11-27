@@ -1,6 +1,6 @@
 # Movie Search Engine
 
-A command-line based movie search engine that allows users to search for movie names based on one or several words related to the movie. The search engine also has the ability to display a list of the top-rated movies when no search results are found.
+A command-line based movie search engine that allows users to perform highly customized searches for movies. The search engine enables queries based on individual fields such as year, genre, actor's name, director's name, and creator's name as well as performing a broader search relevant to the query entered.
 
 ## Table of Contents
 
