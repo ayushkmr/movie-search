@@ -42,18 +42,22 @@ You will be prompted to enter a search query. You can enter a single keyword, mu
 
 ## Features
 
-- Search movie titles based on user queries.
+- Search for movies based on year of release.
+- Search for movies based on genre.
+- Search for movies based on actor's name.
+- Search for movies based on director's name.
+- Search for movies based on creator's name.
+- Broad search that considers several movie-related fields based on user queries.
 - When no search results are found, the search engine attempts a fuzzy search.
 - If fuzzy search also yields no results, it provides a list of top-rated movies.
-- Year-based search for top-rated movies from a specific year.
 
 ## Configuration
 
 The search engine provides configuration mode where you will be able to:
 
 - Set the number of movies to display when a search query has been input.
-- Set a custom message to display when no search results are found.
 - Set the fuzz ratio to specify the similarity percentage for the fuzzy search.
+- Turn debug mode on for debugging
 
 To enter this mode type `--configure` at the search prompt.
 
