@@ -1,6 +1,7 @@
 """
 This module defines the Movie class.
 """
+import json
 from src.models.actor import Actor
 from src.models.director import Director
 from src.models.organization import Organization
@@ -94,6 +95,7 @@ class Movie:
             self._year = self._date_published.year if self._date_published else None
             self._trailer = Trailer(data.get('trailer', {}))
             self._type = data.get('@type', '')
+            self._raw_json = json.dumps(data)
             print(f"Movie object initialized. Name: {self._name}")
         except Exception as e:
             print(f"Failed to initialize Movie object.")
@@ -104,6 +106,11 @@ class Movie:
     def name(self):
         """ Returns the name of the movie """
         return self._name
+    
+    @property
+    def raw_json(self):
+        """ Returns the name of the movie """
+        return self._raw_json
 
     @property
     def actors(self):

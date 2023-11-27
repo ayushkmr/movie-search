@@ -6,113 +6,122 @@ by using the pre-built index. It also makes use of the helper functions
 in the search_utils.py module.
 """
 
-from src.utils.search_utils import *
+import logging
+from typing import List, Dict
 from src.models.movie import Movie
-from src.index import Index
-from typing import Dict, List
+from src.utils.search_utils import *
+from src.utils.print_utils import *
 
 class Search:
-    """
-    A class used to represent a search engine that uses the index to perform searches.
-
-    Attributes
-    ----------
-    index : Dict[str, List[Movie]]
-        An index containing words mapped to movies where it appears.
-    year_index : Dict[int, List[Movie]]
-        An index containing years mapped to movies released in those years.
-    num_results : int
-        The number of search results to display.
-    no_result_message : str
-        The message to display when no results are found.
-    top_rated_movies : List[Movie]
-        A list of top-rated movies.
-    fuzz_ratio : int
-        The ratio for fuzzy search.
-    """
-
-    def __init__(self, index: Index, num_results: int = 3, no_result_message: str = 'No results found', fuzz_ratio: int = 60):
+    def __init__(self, movies: List[Movie], index: Dict[str, List[Movie]]):
         """
-        Constructs all the necessary attributes for the Search object.
-
-        Parameters
-        ----------
-        index : Index
-            An index object that the Search object will use to perform searches.
-        num_results : int
-            The number of search results to display (by default is 3).
-        no_result_message : str
-            A message to display when no results are found (by default is 'No results found').
-        fuzz_ratio : int
-            The ratio for fuzzy search (by default is 60).
+        Initialize the Search object with a list of movies and a word-to-movie index.
         """
-        self.index = index.index
-        self.year_index = index.year_index
-        self.num_results = num_results
-        self.no_result_message = no_result_message
-        self.fuzz_ratio = fuzz_ratio
-        rated_movies = [movie for movie in index.movies if movie.rating_value is not None]
-        self.top_rated_movies = sort_by_rating(rated_movies, num_results)
+        self.logger = logging.getLogger('movie_search')
+        self.movies = movies
+        self.index = index
+        self.logger.info("Search object initialized.")
 
-
-    def perform_search(self, query: str):
+    def general_search(self, query: str, fuzz_ratio: int, num_results: int):
         """
-        Performs a full match, chunked match, or a keyword-based search using the query, 
-        also searches for top-rated movies published in a specific year if the query is a date.
-
-        The function first attempts a full match search, if no results then a chunked match search,
-        if still no results are found it falls back to a keyword-based search.
-
-        If the query can be parsed into a date, the function gets movies by that year instead.
-
-        If there are still no results found, falls back to a fuzzy search.
-
-        Results are always unique movies.
-
-        Parameters
-        ----------
-        query: str
-            The search query or date.
+        General search first performs combined chunked and index-based search,
+        then an json search if query contains multiple words,
+        and finally a fuzzy search if the total results are less than num_results.
         """
-        # Try to perform a full query match and print the results
-        movies = perform_full_query_search(self.index, query)
-        if movies:
-            print_results(sort_by_rating(movies, self.num_results), self.num_results)
-            return
+        self.logger.info(f"General search initiated with query: {query}")
 
-        # If no exact name match found, try to parse the query as a date and get movies by year
-        date = try_parse_date(query)
-        if date:  # If query is a date
-            self.get_movies_by_year(date.year)
-        else:  
-            # If the query is not a date, try to perform chunked query search
-            movies = perform_chunked_query_search(self.index, query)
+        # Perform combined chunked and index search
+        index_search_movies = perform_combined_search(self.index, query)
+
+        # Perform json search if query contains multiple words or special chars
+        json_search_movies = perform_json_search(self.movies, query)
+
+        # Combine and get unique movies from index search and json search
+        combined_movies = list(dict.fromkeys(index_search_movies + json_search_movies))
+
+        movies_found = set(combined_movies)
+        
+        # Print results of combined search
+        if combined_movies:
+            print_exact_match_results(combined_movies[:num_results])
+
+        # If the count of combined results is less than num_results, perform fuzzy search
+        if len(combined_movies) < num_results:
+            fuzzy_search_movies = perform_fuzzy_search(self.movies, query, fuzz_ratio)
             
-            # If movies found for chunked query search, print them
-            if movies:
-                print_results(sort_by_rating(movies, self.num_results), self.num_results)
-            #Otherwise, perform a keyword-based search
-            else:
-                result_set = {movie for word in query.lower().split() if word in self.index for movie in self.index[word]}
-                if result_set:
-                    print_results(sort_by_rating(list(result_set), self.num_results), self.num_results)
-                # If no keywords were found then perform a fuzzy search
-                else:  
-                    fuzzy_search_movies = perform_fuzzy_search(self.index, query, self.fuzz_ratio)
-                    # If movies were found by fuzzy search, print them
-                    if fuzzy_search_movies:
-                        print_results(sort_by_rating(fuzzy_search_movies, self.num_results), self.num_results)
-                    # If not, print the top rated movies
-                    else:  
-                        print_no_result_message(self.no_result_message, self.top_rated_movies)
+            # Filter out movies already displayed by the combined search
+            fuzzy_search_movies = [movie for movie in fuzzy_search_movies if movie not in combined_movies]
+            
+            movies_found.update(fuzzy_search_movies)
 
-    def get_movies_by_year(self, year: int):
-        """
-        Wrapper function for the get_movies_by_year in search_utils.
+            # Print fuzzy results
+            if fuzzy_search_movies:
+                print_probable_match_results(fuzzy_search_movies[:(num_results - len(combined_movies))])
+            
+            
+        if len(movies_found) == 0:
+            print_no_results(self.movies, num_results)
 
-        Parameters
-        ----------
-        year : int
-            The year to find movies from.
+        self.logger.info(f"General search completed with total {len(movies_found)} results found.")
+
+    def search_by_year(self, year: int, num_results: int):
         """
-        get_movies_by_year(self.year_index, year, self.num_results)
+        Search for movies released in a specific year.
+        """
+        self.logger.info(f"Search by year initiated for year: {year}")
+        year_movies = search_by_year(self.movies, year)[:num_results]
+        if year_movies:
+            print_search_results_for_year(year_movies, year)
+        self.logger.info(f"Search by year completed with {len(year_movies)} results found.")
+
+    def search_by_genre(self, genre: str, num_results: int):
+        """
+        Search for movies within a specific genre.
+        """
+        self.logger.info(f"Search by genre initiated for genre: {genre}")
+        genre_movies = search_by_genre(self.movies, genre)[:num_results]
+        if genre_movies:
+            print_search_results_for_genre(genre_movies, genre)
+        self.logger.info(f"Search by genre completed with {len(genre_movies)} results found.")
+
+    def search_by_actor(self, actor: str, num_results: int):
+        """
+        Search for movies by a specific actor.
+        """
+        self.logger.info(f"Search by actor initiated for actor: {actor}")
+        actor_movies = search_by_actor(self.movies, actor)[:num_results]
+        if actor_movies:
+            print_search_results_for_actor(actor_movies, actor)
+        self.logger.info(f"Search by actor completed with {len(actor_movies)} results found.")
+
+    def search_by_creator(self, creator: str, num_results: int):
+        """
+        Search for movies by a specific creator.
+        """
+        self.logger.info(f"Search by creator initiated for creator: {creator}")
+        creator_movies = search_by_creator(self.movies, creator)[:num_results]
+        if creator_movies:
+            print_search_results_for_creator(creator_movies, creator)
+        self.logger.info(f"Search by creator completed with {len(creator_movies)} results found.")
+    
+    def search_by_director(self, director: str, num_results: int):
+        """
+        Search for movies by a specific director.
+        """
+        self.logger.info(f"Search by director initiated for director: {director}")
+        director_movies = search_by_director(self.movies, director)[:num_results]
+        if director_movies:
+            print_search_results_for_directors(director_movies, director)
+        self.logger.info(f"Search by director completed with {len(director_movies)} results found.")
+
+    def search_by_movie_name(self, movie_name: str, num_results: int):
+        """
+        Search for movie by a specific movie name.
+        """
+        self.logger.info(f"Search by movie name initiated for movie name: {movie_name}")
+        
+        movie_name = movie_name.lower()
+        movie_name_movies = [movie for movie in self.movies if movie_name in movie.name.lower()][:num_results]
+        if movie_name_movies:
+            print_search_results_for_movie_name(movie_name_movies, movie_name)
+        self.logger.info(f"Search by movie name completed with {len(movie_name_movies)} results found.")

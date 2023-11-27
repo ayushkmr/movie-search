@@ -4,7 +4,8 @@ and creating Movie objects from JSON strings.
 """
 import json
 from src.models.movie import Movie
-
+from operator import attrgetter
+from typing import List, Union, Optional
 
 def movie_to_json(movie):
     """ 
@@ -75,3 +76,22 @@ def load_movies_from_json_file(filepath):
             print(f"Unable to load movie. Error: {e}")
 
     return movie_objects
+
+def sort_by_rating(movies: List[Movie], num_results: Optional[int] = None) -> List[Movie]:
+    """
+    Sorts a list of Movies by rating_value and returns the top results.
+
+    Parameters
+    ---------
+    movies: List[Movie]
+        List of movies to sort.
+    num_results: Optional[int]
+        Number of results to return, will return all movies if num_results is None or not provided.
+
+    Returns
+    -------
+    List[Movie]
+        Sorted list of movies.
+    """
+    sorted_movies = sorted(movies, key=attrgetter('rating_value'), reverse=True)
+    return sorted_movies if num_results is None else sorted_movies[:num_results]

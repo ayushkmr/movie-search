@@ -1,195 +1,209 @@
 """
-This module contains utility functions that are used by the Search object 
-to sort movies by rating value, print out the search results, print no result message,
-get movies by a particular year. It also includes a function used to parse a string
-into a date in strict 'YYYY-MM-DD' format.
+This module contains utility functions that are used by the Search object to sort movies by rating value, 
+print out the search results, print no result message, and get movies by a particular year. 
+It includes functions used to parse a string into a date in strict 'YYYY-MM-DD' format as 
+well as search functions to find movies by year, actor's name, creator name, and genre.
 """
 
-from typing import Dict, List, Union
-from datetime import datetime
+from typing import Dict, List
+from fuzzywuzzy import fuzz
 from operator import attrgetter
 from src.models.movie import Movie
-from fuzzywuzzy import process
+from src.index import Index
 
-def perform_fuzzy_search(index: Dict[str, List[Movie]], query: str, fuzz_ratio: int) -> List[Movie]:
+import logging
+
+logger = logging.getLogger('movie_search')
+
+def perform_exact_search(movies: List[Movie], query: str) -> List[Movie]:
     """
-    Performs a fuzzy search on the index using the provided query and fuzz ratio.
+    Performs an exact match search by looking for the query as a substring in the movie's name.
 
     Parameters
     ----------
-    index : Dict[str, List[Movie]]
-        An index containing words mapped to movies where they appear.
-    query: str
+    movies : List[Movie]
+        The list of movies where we should search.
+    query : str
         The search query.
-    fuzz_ratio: int
-        The minimum similarity ratio to consider a match.
 
     Returns
     -------
     List[Movie]
-        A list of unique Movie objects that contain the query string in the movie title.
+        List of movies that contain the exact search query in their names.
     """
-    unique_movies = {movie for movies in index.values() for movie in movies}
-    movie_names = {movie.name: movie for movie in unique_movies}
-    matches = process.extractBests(query, movie_names.keys(), score_cutoff=fuzz_ratio)
-    return [movie_names[name] for name, _ in matches]
+    logger.debug("Performing exact search with query: %s", query)
+    movies_match = [movie for movie in movies if query.lower() in movie.name.lower()]
+    logger.debug("Exact search movies: %s", [movie.name for movie in movies_match])
+    return movies_match
 
-def print_results(movies: List[Movie], num_results: int, prefix: str = "\nTop"):
+def perform_combined_search(index: Index, query: str) -> List[Movie]:
     """
-    Print out the search results.
-    
-    Parameters
-    ----------
-    movies : list[Movie]
-        List of movies to print.
-    num_results : int
-        Number of results to display.
-    prefix : str, optional
-        Prefix string for results output, default is '\nTop'
-    """
-    # Enforce uniqueness
-    unique_movies = {movie.name: movie for movie in movies}
-
-    # Select top N unique movies
-    top_movies = sorted(unique_movies.values(), key=attrgetter('rating_value'), reverse=True)[:num_results]
-
-    # Determine the number of printed results
-    actual_num_results = len(top_movies)
-
-    print(f"{prefix} {actual_num_results} result(s):")
-    for movie in top_movies:
-        print(f'\t{movie.name}')
-
-
-def print_no_result_message(no_result_message: str, top_rated_movies: List[Movie]):
-    """
-    Prints no results message and displays top-rated movies.
+    Attempts to iteratively find matches for chunks of the query within movie names.
 
     Parameters
     ----------
-    no_result_message : str
-        Message to display when no result is found.
-    top_rated_movies : list[Movie]
-        List of top-rated movies.
-    """
-    print(no_result_message)
-    print('Showing top-rated movies instead:')
-    for movie in top_rated_movies:
-        print(f'\t{movie.name}')
-
-
-def get_movies_by_year(year_index: Dict[int, List[Movie]], year: int, num_results: int):
-    """
-    Fetches and prints the names of top-rated movies released in a particular year,
-    removing duplicates based on movie names.
-    
-    Parameters
-    ----------
-    year_index : dict
-        Dictionary of movies indexed by their year.
-    year : int
-        The year to find movies from.
-    num_results : int
-        Number of results to display.
-    """
-    # Fetch movies by year from the year_index
-    movies_by_year = year_index.get(year, [])
-    
-    # Enforce uniqueness with a dict
-    unique_movies = {movie.name: movie for movie in movies_by_year}
-
-    # Select top N unique movies
-    top_movies = sorted(unique_movies.values(), key=attrgetter('rating_value'), reverse=True)[:num_results]
-
-    # Get the actual number of results, to be used in the print statement
-    results_count = len(top_movies)
-
-    if top_movies:
-        print(f"\nTop {results_count} result(s):")
-        for movie in top_movies:
-            print(f'\t{movie.name}')
-    else:
-        print(f"No movies found from the year {year}.")
-
-
-def sort_by_rating(movies: List[Movie], num_results: int):
-    """
-    Sorts a list of Movies by rating value and returns the top results.
-
-    Parameters
-    ----------
-    movies : list[Movie]
-        List of movies to sort.
-    num_results : int
-        Number of results to return.
+    index : Index
+        An index object containing words mapped to movies where it appears.
+    query : str
+        The search query (which will be split into chunks).
 
     Returns
     -------
     list[Movie]
-        Sorted list of movies.
+        List of unique movies that match all chunks of the query.
     """
-    return sorted(movies, key=attrgetter('rating_value'), reverse=True)[:num_results]
+    logger.debug("Performing combined index and chunked query search with query: %s", query)
+    chunks = query.lower().split()
 
+    intersect_movies = set(index.index[chunks[0]]) if chunks else set()
 
-def try_parse_date(text: str) -> Union[datetime, None]:
-    """
-    Tries to parse a string into a date in 'YYYY-MM-DD' format.
-    If the string is not a valid date in 'YYYY-MM-DD' format, it returns None.
-    Arguments:
-        text : a string to parse into a date
-    Returns:
-        a datetime object if the string is a valid date; otherwise, None
-    """
-    try:
-        return datetime.strptime(text, '%Y-%m-%d')
-    except ValueError:
-        return None
+    for chunk in chunks[1:]:
+        intersect_movies &= set(index.index[chunk])
 
-def perform_full_query_search(index: Dict[str, List[Movie]], query: str) -> List[Movie]:
+    logger.debug("Combined index and chunk search movies: %s", [movie.name for movie in intersect_movies])
+    return list(intersect_movies)
+
+def perform_fuzzy_search(movies: List[Movie], query: str, fuzz_ratio: int) -> List[Movie]:
     """
-    Attempts to find full query match in the movie names, ensuring uniqueness.
+    Attempts to find fuzzy matches of the chunks of the query in movie names.
 
     Parameters
     ----------
-    index : Dict[str, List[Movie]]
-        An index containing words mapped to movies where it appears.
+    movies: List[Movie]
+        The list of movies where we should search.
+    query: str
+        The search query.
+    fuzz_ratio: int
+        The minimum similarity ratio to be considered a match in a fuzzy search.
+
+    Returns
+    -------
+    list[Movie]
+        List of unique movies that match all chunks of the query based on fuzziness.
+    """
+    logger.debug("Performing fuzzy search with query: %s", query)
+    chunks = query.lower().split()
+    intersect_movies = set(movie for movie in movies if fuzz.ratio(chunks[0], movie.name.lower()) >= fuzz_ratio) if chunks else set()
+
+    for chunk in chunks[1:]:
+        intersect_movies &= set(movie for movie in movies if fuzz.ratio(chunk, movie.name.lower()) >= fuzz_ratio)
+
+    logger.debug("Fuzzy search movies: %s", [movie.name for movie in intersect_movies])
+    return list(intersect_movies)
+
+def perform_json_search(movies: List[Movie], query: str) -> List[Movie]:
+    """
+    Performs a JSON substring search by looking for the query as a substring in the movie's raw_json.
+    It only performs the search when the query contains non-alphanumeric characters.
+
+    Parameters
+    ----------
+    movies : List[Movie]
+        The list of movies where we should search.
     query : str
         The search query.
-
+        
     Returns
     -------
-    list[Movie]
-        List of unique movies that match the query.
+    List[Movie]
+        List of movies where the raw_json contains the search query.
     """
-    # Fetch all matching movies
-    movies = [movie for movie_list in index.values() for movie in movie_list
-                if movie.name.lower() == query.lower()]
-    
-    # Enforce uniqueness with a dict
-    unique_movies = {movie.name: movie for movie in movies}
-    return list(unique_movies.values())
+    if query.isalnum():  # If the query contains only alphanumeric characters, return an empty list
+        return []
 
+    logger.debug("Performing JSON substring search with query: %s", query)
+    query = query.lower()
+    movies_match = [movie for movie in movies if query in movie.raw_json.lower()]
+    logger.debug("JSON substring search movies: %s", [movie.name for movie in movies_match])
+    return movies_match
 
-def perform_chunked_query_search(index: Dict[str, List[Movie]], query: str) -> List[Movie]:
+def search_by_year(movies: List[Movie], year: int) -> List[Movie]:
     """
-    Attempts to find a match of any word in query within movie names, ensuring uniqueness.
+    Search for movies released in the specified year.
 
     Parameters
     ----------
-    index : Dict[str, List[Movie]]
-        An index containing words mapped to movies where it appears.
-    query : str
-        The search query.
+    movies: List[Movie]
+        The list of movies where we should search.
+    year: int
+        The year to search for.
 
     Returns
     -------
     list[Movie]
-        List of unique movies that match the query.
+        List of movies released in the specified year.
     """
-    # Fetch all matching movies
-    movies = [movie for movie_list in index.values() for movie in movie_list
-                if query.lower() in movie.name.lower()]
-    
-    # Enforce uniqueness with a dict
-    unique_movies = {movie.name: movie for movie in movies}
-    return list(unique_movies.values())
+    return [movie for movie in movies if movie.year == year]
+
+def search_by_actor(movies: List[Movie], actor: str) -> List[Movie]:
+    """
+    Search for movies featuring a specified actor.
+
+    Parameters
+    ----------
+    movies: List[Movie]
+        The list of movies where we should search.
+    actor: str
+        The name of the actor to search for.
+
+    Returns
+    -------
+    list[Movie]
+        List of movies that feature the specified actor.
+    """
+    return [movie for movie in movies if any(actor.lower() in a.name.lower() for a in movie.actors)]
+
+def search_by_genre(movies: List[Movie], genre: str) -> List[Movie]:
+    """
+    Search for movies from a specified genre.
+
+    Parameters
+    ----------
+    movies: List[Movie]
+        The list of movies where we should search.
+    genre: str
+        The genre to search for.
+
+    Returns
+    -------
+    list[Movie]
+        List of movies from the specified genre.
+    """
+    return [movie for movie in movies if any(genre.lower() in g.name.lower() for g in movie.genres)]
+
+def search_by_creator(movies: List[Movie], creator: str) -> List[Movie]:
+    """
+    Search for movies created by a specific person or entity.
+
+    Parameters
+    ----------
+    movies: List[Movie]
+        The list of movies where we should search.
+    creator: str
+        The creator to search for.
+
+    Returns
+    -------
+    list[Movie]
+        List of movies created by the specified person or entity.
+    """
+    return [movie for movie in movies if any(creator.lower() in c.name.lower() for c in movie.creators)]
+
+
+def search_by_director(movies: List[Movie], director: str) -> List[Movie]:
+    """
+    Search for movies directed by a specific director.
+
+    Parameters
+    ----------
+    movies: List[Movie]
+        The list of movies where we should search.
+    director: str
+        The director to search for.
+
+    Returns
+    -------
+    list[Movie]
+        List of movies directed by the specified director.
+    """
+    return [movie for movie in movies if any(director.lower() in d.name.lower() for d in movie.directors)]
