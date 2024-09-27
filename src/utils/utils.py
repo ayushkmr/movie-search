@@ -2,14 +2,16 @@
 This module contains utility functions for converting Movie objects to JSON strings
 and creating Movie objects from JSON strings.
 """
+
 import json
 from src.models.movie import Movie
 from operator import attrgetter
 from typing import List, Union, Optional
 
+
 def movie_to_json(movie):
-    """ 
-    Convert a Movie object to a JSON string 
+    """
+    Convert a Movie object to a JSON string
 
     Parameters
     ----------
@@ -25,8 +27,8 @@ def movie_to_json(movie):
 
 
 def json_to_movie(json_str):
-    """ 
-    Convert a JSON string to a Movie object 
+    """
+    Convert a JSON string to a Movie object
 
     Parameters
     ----------
@@ -38,7 +40,7 @@ def json_to_movie(json_str):
     Movie
         A Movie object representation of the JSON string
     """
-    try: 
+    try:
         movie = Movie(json.loads(json_str))
         print(f"Movie successfully loaded: {movie.name}")
         return movie
@@ -48,14 +50,14 @@ def json_to_movie(json_str):
 
 
 def load_movies_from_json_file(filepath):
-    """ 
+    """
     Load JSON data from a file and create a list of Movie objects.
 
     Parameters
     ----------
-    filepath : str 
+    filepath : str
         Path of the JSON file to read.
-        
+
     Returns
     ----------
     list
@@ -64,7 +66,7 @@ def load_movies_from_json_file(filepath):
 
     movie_objects = []
 
-    with open(filepath, 'r') as json_file:
+    with open(filepath, "r", encoding="utf-8") as json_file:
         movies_json_array = json.load(json_file)
 
     for movie_json in movies_json_array:
@@ -77,7 +79,10 @@ def load_movies_from_json_file(filepath):
 
     return movie_objects
 
-def sort_by_rating(movies: List[Movie], num_results: Optional[int] = None) -> List[Movie]:
+
+def sort_by_rating(
+    movies: List[Movie], num_results: Optional[int] = None
+) -> List[Movie]:
     """
     Sorts a list of Movies by rating_value and returns the top results.
 
@@ -93,5 +98,5 @@ def sort_by_rating(movies: List[Movie], num_results: Optional[int] = None) -> Li
     List[Movie]
         Sorted list of movies.
     """
-    sorted_movies = sorted(movies, key=attrgetter('rating_value'), reverse=True)
+    sorted_movies = sorted(movies, key=attrgetter("rating_value"), reverse=True)
     return sorted_movies if num_results is None else sorted_movies[:num_results]
